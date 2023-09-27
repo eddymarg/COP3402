@@ -56,18 +56,20 @@ int main(int argc, char *argv[]){
     // once -p option works, implement basic fetch-execute cycle for VM (without -p option)
     // make function that executes single instruction and handles tracing and call function to execute each instruction in a loop
 
-    // attempt to implement the -p option
-    progname = argv[0];
-    argc--;
-    argv++;
 
     if (argc != 1){
         usage();
     }
 
-    const char *bofname = argv[0];
+    // attempt to implement the -p option
+    if(argv[1] == "-p"){
+        progname = argv[0];
+        argc--;
+        argv++;
+        const char *bofname = argv[0];
 
-    BOFFILE bf = bof_read_open(bofname);
-    disasmProgram(stdout, bf); // edit this to asm
-    return EXIT_SUCCESS;
+        BOFFILE bf = bof_read_open(bofname);
+        disasmProgram(stdout, bf);
+        return EXIT_SUCCESS;
+    }
 }
