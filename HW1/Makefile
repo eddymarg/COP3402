@@ -12,7 +12,7 @@ RM = rm -f
 SUBMISSIONZIPFILE = submission.zip
 ZIP = zip -9
 # Add the names of your own files with a .o suffix to link them into the VM
-VM_OBJECTS = machine_main.o machine.o \
+VM_OBJECTS = vm.c \
              machine_types.o instruction.o bof.o \
              regname.o utilities.o 
 SOURCESLIST = `echo $(VM_OBJECTS) | sed -e 's/\\.o/.c/g'`
