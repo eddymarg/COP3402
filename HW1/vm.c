@@ -1,4 +1,4 @@
-// Edrienne Gregana, (everyone else add names pls)
+// Edrienne Gregana, Andrew Zhao, (everyone else add names pls)
 // SRM implementation
 
 #include <stdio.h>
