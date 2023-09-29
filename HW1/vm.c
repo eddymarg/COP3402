@@ -60,7 +60,7 @@ static union mem_u {
 
 // register/computational type instructions
 typedef struct {
-    unsinged short op : 6;
+    unsigned short op : 6;
     reg_num_type rs : 5;
     reg_num_type rd : 5;
     shift_type shift : 5;
