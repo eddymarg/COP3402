@@ -7,7 +7,20 @@
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
-#include "disasm.c"
+#include "asm_unparser.h";
+#include "asm.tab.h";
+#include "assemble.h";
+#include "ast.h";
+#include "disasm.h";
+#include "file_location.h";
+#include "id_attrs.h";
+#include "lexer.h";
+#include "parser_types.h";
+#include "pass1.h";
+#include "regname.h";
+#include "symtab.h";
+#include "utilities.h":
+
 // a size for the memory (2^16 bytes = 64k)
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
