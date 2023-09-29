@@ -19,7 +19,7 @@ static int PC;
 //stack pointer;
 static int SP; 
 //Global pointer
-sraric int GP; 
+static int GP; 
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
