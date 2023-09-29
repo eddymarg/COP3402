@@ -14,8 +14,8 @@
 static char *progname; // maybe change this? idk what this means
 
 // // this might not be needed
-static int PC; program counter
-static int SP; stack pointer
+static int PC; program counter;
+static int SP; stack pointer;
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -40,6 +40,43 @@ static union mem_u {
     word_type words[MEMORY_SIZE_IN_WORDS];
     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 } memory;
+
+// register/computational type instructions
+typedef struct {
+    unsinged short op : 6;
+    reg_num_type rs : 5;
+    reg_num_type rd : 5;
+    shift_type shift : 5;
+    func_type func : 6;
+}reg_instr_t;
+
+// system call instructions
+typedef struct {
+    unsigned short op : 6;
+    unsigned int code : 20;
+    func_type func : 6;
+}syscall_instr_t;
+
+// immediate type instructions
+typedef struct {
+    unsigned short op : 6;
+    reg_num_type rs : 5;
+    reg_num_type rt : 5;
+    immediate_type immed : 16;
+}immed_instr_t;
+
+// jump type instructions
+typedef struct {
+    unsigned short op : 6;
+    address_type addr : 26;
+}jump_instr_t;
+
+/*
+for (int i = 0; i < j; i++)
+{
+    memory.instr[i] = instruction_read(bf);
+}
+*/
 
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
