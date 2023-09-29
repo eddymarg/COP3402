@@ -14,8 +14,12 @@
 static char *progname; // maybe change this? idk what this means
 
 // // this might not be needed
-static int PC; program counter;
-static int SP; stack pointer;
+//program counter;
+static int PC; 
+//stack pointer;
+static int SP; 
+//Global pointer
+sraric int GP; 
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
