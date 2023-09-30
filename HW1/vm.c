@@ -3,19 +3,37 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
-#include "disasm.c"
+#include "asm_unparser.h"
+#include "asm.tab.h"
+#include "assemble.h"
+#include "ast.h"
+#include "disasm.h"
+#include "file_location.h"
+#include "id_attrs.h"
+#include "lexer.h"
+#include "parser_types.h"
+#include "pass1.h"
+#include "regname.h"
+#include "symtab.h"
+#include "utilities.h"
+
 // a size for the memory (2^16 bytes = 64k)
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
 
 // // this might not be needed
-// static int PC; program counter
-// static int SP; stack pointer
+//program counter;
+static int PC; 
+//stack pointer;
+// static int SP; 
+//Global pointer
+// static int GP; 
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -41,6 +59,13 @@ static union mem_u {
     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 } memory;
 
+/*
+for (int i = 0; i < j; i++)
+{
+    memory.instr[i] = instruction_read(bf);
+}
+*/
+
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
 }
@@ -62,14 +87,27 @@ int main(int argc, char *argv[]){
     }
 
     // attempt to implement the -p option
-    if(argv[1] == "-p"){
+    if (strcmp(argv[1], "-p")) {
         progname = argv[0];
         argc--;
         argv++;
         const char *bofname = argv[0];
 
         BOFFILE bf = bof_read_open(bofname);
-        disasmProgram(stdout, bf);
+        BOFHeader bof_header = bof_read_header(bf);
+
+        // loading instructions into memory
+        for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
+            bin_instr_t instruction = instruction_read(bf);
+            memory.instrs[PC] = instruction;
+        }
+
+        // loading data into memory
+        for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+            memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+        }
+
+        // disasmProgram(stdout, bf);
         return EXIT_SUCCESS;
     }
 }
