@@ -3,19 +3,38 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
+#include "asm_unparser.h"
+#include "asm.tab.h"
+#include "assemble.h"
+#include "ast.h"
+#include "disasm.h"
 #include "disasm.c"
+#include "file_location.h"
+#include "id_attrs.h"
+#include "lexer.h"
+#include "parser_types.h"
+#include "pass1.h"
+#include "regname.h"
+#include "symtab.h"
+#include "utilities.h"
+
 // a size for the memory (2^16 bytes = 64k)
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
 
 // // this might not be needed
-// static int PC; program counter
-// static int SP; stack pointer
+//program counter;
+//static int PC; 
+//stack pointer;
+// static int SP; 
+//Global pointer
+// static int GP; 
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -35,11 +54,18 @@ static char *progname; // maybe change this? idk what this means
 // memory.bytes[36] or as memory.words[9] or as
 // memory.instrs[9]
 
-static union mem_u {
-    byte_type bytes[MEMORY_SIZE_IN_BYTES];
-    word_type words[MEMORY_SIZE_IN_WORDS];
-    bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
-} memory;
+// static union mem_u {
+//     byte_type bytes[MEMORY_SIZE_IN_BYTES];
+//     word_type words[MEMORY_SIZE_IN_WORDS];
+//     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
+// } memory;
+
+/*
+for (int i = 0; i < j; i++)
+{
+    memory.instr[i] = instruction_read(bf);
+}
+*/
 
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
@@ -57,19 +83,22 @@ int main(int argc, char *argv[]){
     // make function that executes single instruction and handles tracing and call function to execute each instruction in a loop
 
 
-    if (argc != 1){
+    if (argc < 3){
         usage();
     }
 
+    printf("%d", strcmp(argv[1], "-p") == 0);
+
     // attempt to implement the -p option
-    if(argv[1] == "-p"){
-        progname = argv[0];
-        argc--;
-        argv++;
-        const char *bofname = argv[0];
+    if (strcmp(argv[1], "-p") == 0) {
+        const char *bofname = argv[2]; // name of bof file to read
 
         BOFFILE bf = bof_read_open(bofname);
+
         disasmProgram(stdout, bf);
+
+        printf("success");
+
         return EXIT_SUCCESS;
     }
 }
