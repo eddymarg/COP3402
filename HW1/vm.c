@@ -8,11 +8,13 @@
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
+// #include "bof.c"
 #include "asm_unparser.h"
 #include "asm.tab.h"
 #include "assemble.h"
 #include "ast.h"
 #include "disasm.h"
+#include "disasm.c"
 #include "file_location.h"
 #include "id_attrs.h"
 #include "lexer.h"
@@ -82,32 +84,29 @@ int main(int argc, char *argv[]){
     // make function that executes single instruction and handles tracing and call function to execute each instruction in a loop
 
 
-    if (argc != 1){
+    if (argc < 2){
         usage();
     }
-
     // attempt to implement the -p option
-    if (strcmp(argv[1], "-p")) {
-        progname = argv[0];
-        argc--;
-        argv++;
-        const char *bofname = argv[0];
-
+    if (strcmp(argv[1], "-p") == 0) {
+        const char *bofname = argv[2];
         BOFFILE bf = bof_read_open(bofname);
-        BOFHeader bof_header = bof_read_header(bf);
+        // BOFHeader bof_header = bof_read_header(bf);
 
-        // loading instructions into memory
-        for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
-            bin_instr_t instruction = instruction_read(bf);
-            memory.instrs[PC] = instruction;
-        }
+        // // loading instructions into memory
+        // for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
+        //     bin_instr_t instruction = instruction_read(bf);
+        //     memory.instrs[PC] = instruction;
+        // }
 
-        // loading data into memory
-        for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
-            memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
-        }
+        // // loading data into memory
+        // for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+        //     memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+        // }
 
-        // disasmProgram(stdout, bf);
+        disasmProgram(stdout, bf);
         return EXIT_SUCCESS;
+    } else {
+        
     }
 }

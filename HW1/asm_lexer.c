@@ -1,6 +1,6 @@
-#line 1 "asm_lexer.c"
+#line 2 "asm_lexer.c"
 
-#line 3 "asm_lexer.c"
+#line 4 "asm_lexer.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -677,12 +677,12 @@ static void unsignednum2ast(unsigned int val)
     yylval = t;
 }
 
-#line 680 "asm_lexer.c"
+#line 681 "asm_lexer.c"
 #line 101 "asm_lexer.l"
   /* states of the lexer */
 
 
-#line 685 "asm_lexer.c"
+#line 686 "asm_lexer.c"
 
 #define INITIAL 0
 #define INSTRUCTION 1
@@ -914,7 +914,7 @@ YY_DECL
 #line 106 "asm_lexer.l"
 
 
-#line 917 "asm_lexer.c"
+#line 918 "asm_lexer.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1425,7 +1425,7 @@ YY_RULE_SETUP
 #line 220 "asm_lexer.l"
 ECHO;
 	YY_BREAK
-#line 1428 "asm_lexer.c"
+#line 1429 "asm_lexer.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(INSTRUCTION):
 case YY_STATE_EOF(DATADECL):

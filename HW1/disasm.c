@@ -11,10 +11,11 @@
 void disasmProgram(FILE *out, BOFFILE bf)
 {
     BOFHeader bh = bof_read_header(bf);
+    printf("Addr Instruction\n");
     disasmTextSection(out, bf, bh);
     disasmDataSection(out, bf, bh);
-    disasmStackSection(out, bh);
-    fprintf(out, ".end");
+    // disasmStackSection(out, bh);
+    // fprintf(out, ".end");
     newline(out);
 }
 
@@ -22,8 +23,8 @@ void disasmProgram(FILE *out, BOFFILE bf)
 // with output going to the file out
 void disasmTextSection(FILE *out, BOFFILE bf, BOFHeader bh)
 {
-    fprintf(out, ".text %u", bh.text_start_address);
-    newline(out);
+    // fprintf(out, ".text %u", bh.text_start_address);
+    // newline(out);
     disasmInstrs(out, bf, bh.text_length / BYTES_PER_WORD);
 }
 
@@ -40,7 +41,7 @@ void disasmInstrs(FILE *out, BOFFILE bf, int length)
 // each instruction has a label of the form a%d, where %d is the value of i
 void disasmInstr(FILE *out, bin_instr_t bi, unsigned int i)
 {
-    fprintf(out, "a%d:\t%s", i, instruction_assembly_form(bi));
+    fprintf(out, "%4d %s", i, instruction_assembly_form(bi));
     newline(out);
 }
 
@@ -48,9 +49,21 @@ void disasmInstr(FILE *out, bin_instr_t bi, unsigned int i)
 // with output going to out
 void disasmDataSection(FILE *out, BOFFILE bf, BOFHeader bh)
 {
-    fprintf(out, ".data %u", bh.data_start_address);
-    newline(out);
-    disasmStaticDecls(out, bf, bh.data_length / BYTES_PER_WORD);
+    int length = bh.data_length / BYTES_PER_WORD;
+    int i;
+    if (length == 2) {
+        fprintf(out, "1024: 0 ...\t");
+        return;
+    }
+    for (i = 0; i < length; i++) {
+        int rw = bof_read_word(bf);
+        if (rw != 0)
+            fprintf(out, "%8u: %d\t", bh.data_start_address + 4*i, rw);
+        if (i == 4)
+            newline(out);
+    }
+    fprintf(out, "%8u: 0 ...\t", bh.data_start_address + 4*i);
+    // disasmStaticDecls(out, bf, bh.data_length / BYTES_PER_WORD);
 }
 
 // Disassemble length static data words from bf, with output going to out
