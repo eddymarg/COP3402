@@ -3,36 +3,74 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
-#include "asm_unparser.h";
-#include "asm.tab.h";
-#include "assemble.h";
-#include "ast.h";
-#include "disasm.h";
-#include "file_location.h";
-#include "id_attrs.h";
-#include "lexer.h";
-#include "parser_types.h";
-#include "pass1.h";
-#include "regname.h";
-#include "symtab.h";
-#include "utilities.h":
+#include "asm_unparser.h"
+#include "asm.tab.h"
+#include "assemble.h"
+#include "ast.h"
+#include "disasm.h"
+#include "disasm.c"
+#include "file_location.h"
+#include "id_attrs.h"
+#include "lexer.h"
+#include "parser_types.h"
+#include "pass1.h"
+#include "regname.h"
+#include "symtab.h"
+#include "utilities.h"
 
 // a size for the memory (2^16 bytes = 64k)
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
+//BYTES_PER_WORD = 4;
 
 // // this might not be needed
 //program counter;
 static int PC; 
 //stack pointer;
-static int SP; 
+//static int SP; 
 //Global pointer
-static int GP; 
+// static int GP; 
+
+// Register/Computational type instructions
+typedef struct 
+{
+    unsigned short op : 6;
+    reg_num_type rs : 5;
+    reg_num_type rt : 5;
+    reg_num_type rd : 5;
+    shift_type shift : 5;
+    func_type func : 6;
+}reg_instr_t;
+
+// Immediate type instructions
+typedef struct 
+{
+    unsigned short op : 6;
+    reg_num_type rs : 5;
+    reg_num_type rt : 5;
+    immediate_type immed : 16;
+}immed_instr_t;
+
+// Jump type instructions
+typedef struct 
+{
+    unsigned short op : 6;
+    address_type addr : 26;
+}jump_instr_t;
+
+// System Call Instructions
+typedef struct 
+{
+    unsigned short op : 6;
+    unsigned int code : 20;
+    func_type func : 6;
+}syscall_instr_t;
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -58,18 +96,12 @@ static union mem_u {
     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 } memory;
 
-/*
-for (int i = 0; i < j; i++)
-{
-    memory.instr[i] = instruction_read(bf);
-}
-*/
-
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[])
+{
     // order of things:
     // get -p option to work: code in disassembler can be used as model of what to do
     // use functions in BOF module to read from BOF
@@ -81,19 +113,122 @@ int main(int argc, char *argv[]){
     // make function that executes single instruction and handles tracing and call function to execute each instruction in a loop
 
 
-    if (argc != 1){
+    if (argc < 3){
         usage();
     }
 
     // attempt to implement the -p option
-    if(argv[1] == "-p"){
-        progname = argv[0];
-        argc--;
-        argv++;
-        const char *bofname = argv[0];
+    if (strcmp(argv[1], "-p") == 0) {
+        const char *bofname = argv[2]; // name of bof file to read
 
         BOFFILE bf = bof_read_open(bofname);
+
         disasmProgram(stdout, bf);
+
+        printf("success\n");
+
         return EXIT_SUCCESS;
+    }
+
+    const char *bofname = argv[0];
+    BOFFILE bf = bof_read_open(bofname);
+    BOFHeader bof_header = bof_read_header(bf);
+
+    // loading instruction into memory
+    for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
+        bin_instr_t instruction = instruction_read(bf);
+        memory.instrs[PC] = instruction;
+    }
+
+    // loading data into memory
+    for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+        memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+    }
+
+    // 3 different types of instructions + system call
+    // Register, Immediate, Jump
+    switch(instruction_type)
+    {
+        case reg_instr_type:
+            switch(func)
+            {
+                case ADD:
+
+                    break;
+                case SUB:
+
+                    break;
+                case MUL:
+
+                    break;
+                case DIV:
+
+                    break;
+                case MFHI:
+
+                    break;
+                case MFLO:
+
+                    break;
+                case AND:
+
+                    break;
+                case BOR:
+
+                    break;
+                case NOR:
+
+                    break;
+                case SLL:
+
+                    break;
+                case SRL:
+
+                    break;
+                case JR:
+
+                    break;
+                case SYSCALL:
+                    break;
+            }
+        case immed_instr_type:
+            switch(op_code)
+            {
+                case A:
+            }
+        case jump_instr_type:
+            switch()
+            {
+                case A:
+            }
+        case syscall_instr_type:
+            switch()
+            {
+                case A:
+            }
+    }
+
+    // use opcode?
+    // just need a way to differentiate through the 3 different types.
+    //int instr_num = textlength/bytes_per_word
+    for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) 
+    {
+        instr_type in_type = instruction_type(memory.instrs[i]); 
+        switch(in_type){
+        // system call
+        case syscall_instr_type:
+            break;
+        // register instructions
+        case reg_instr_type:
+            break;
+        // jump instructions
+        case jump_instr_type:
+            break;
+        // immediate instructions
+        case immed_instr_type:
+            break;
+        default: 
+            perror("instruction type error");
+        }
     }
 }
