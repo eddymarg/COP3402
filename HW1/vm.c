@@ -27,12 +27,13 @@
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
+//BYTES_PER_WORD = 4;
 
 // // this might not be needed
 //program counter;
-//static int PC; 
+static int PC; 
 //stack pointer;
-// static int SP; 
+//static int SP; 
 //Global pointer
 // static int GP; 
 
@@ -54,11 +55,11 @@ static char *progname; // maybe change this? idk what this means
 // memory.bytes[36] or as memory.words[9] or as
 // memory.instrs[9]
 
-// static union mem_u {
-//     byte_type bytes[MEMORY_SIZE_IN_BYTES];
-//     word_type words[MEMORY_SIZE_IN_WORDS];
-//     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
-// } memory;
+static union mem_u {
+    byte_type bytes[MEMORY_SIZE_IN_BYTES];
+    word_type words[MEMORY_SIZE_IN_WORDS];
+    bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
+} memory;
 
 /*
 for (int i = 0; i < j; i++)
@@ -87,8 +88,6 @@ int main(int argc, char *argv[]){
         usage();
     }
 
-    printf("%d", strcmp(argv[1], "-p") == 0);
-
     // attempt to implement the -p option
     if (strcmp(argv[1], "-p") == 0) {
         const char *bofname = argv[2]; // name of bof file to read
@@ -101,4 +100,48 @@ int main(int argc, char *argv[]){
 
         return EXIT_SUCCESS;
     }
+
+    const char *bofname = argv[0];
+    BOFFILE bf = bof_read_open(bofname);
+    BOFHeader bof_header = bof_read_header(bf);
+
+    // loading instruction into memory
+    for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
+        bin_instr_t instruction = instruction_read(bf);
+        memory.instrs[PC] = instruction;
+    }
+
+    // loading data into memory
+    for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+        memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+    }
+
+    // 3 different types of instructions + system call
+    // Register, Immediate, Jump
+
+    // use opcode?
+    // just need a way to differentiate through the 3 different types.
+    //int instr_num = textlength/bytes_per_word
+    for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
+        instr_type in_type = instruction_type(memory.instrs[i]); 
+        switch(in_type){
+        // system call
+        case syscall_instr_type:
+            
+            break;
+        // register instructions
+        case reg_instr_type:
+            break;
+        // jump instructions
+        case jump_instr_type:
+            break;
+        // immediate instructions
+        case immed_instr_type:
+            break;
+        default: 
+            perror("instruction type error");
+    
+    }
 }
+
+
