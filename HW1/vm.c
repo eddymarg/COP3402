@@ -33,9 +33,9 @@ static char *progname; // maybe change this? idk what this means
 // program counter;
 static address_type pc; 
 // stack pointer;
-static word_type gp; 
-// Global pointer
-static word_type fp; 
+// static word_type gp; 
+// // Global pointer
+// static word_type fp; 
 // storing number in each registers
 static word_type GPR[32];
 static int32_t hi; 
@@ -108,20 +108,21 @@ int main(int argc, char *argv[]){
         BOFFILE bf = bof_read_open(bofname);
         BOFHeader bof_header = bof_read_header(bf);
 
+        pc = bof_header.text_start_address;
+        GPR[GP] = bof_header.data_start_address;
+        GPR[FP] = bof_header.stack_bottom_addr;
+        GPR[SP] = bof_header.stack_bottom_addr;
+
         // loading instruction into memory
         for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
             bin_instr_t instruction = instruction_read(bf);
-            memory.instrs[i] = instruction;
+            memory.instrs[pc / BYTES_PER_WORD + i] = instruction;
         }
 
         // loading data into memory
         for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
-            memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+            memory.words[GPR[GP] / BYTES_PER_WORD + i] = bof_read_word(bf);
         }
-
-        pc = bof_header.text_start_address;
-        gp = bof_header.data_start_address;
-        fp = bof_header.stack_bottom_addr;
 
     // 3 different types of instructions + system call
     // Register, Immediate, Jump
@@ -142,13 +143,14 @@ int main(int argc, char *argv[]){
                         exit(0);
                     } else if (strcmp(sys_call, 'PSTR') == 0) {
                         // memory
-                        GPR[2] = printf("%s", &memory.words[GPR[4]]);
+                        GPR[2] = printf("%s", &memory.bytes[GPR[4]]);
                     } else if (strcmp(sys_call, 'PCH') == 0) {
                         GPR[2] = fputc(GPR[4], stdout);
                     } else if (strcmp(sys_call, 'RCH') == 0) {
                         GPR[2] = getc(stdin);
                     } else if (strcmp(sys_call, 'STRA') == 0) {
                         // start VM tracing; start tracing output
+
                     } else if (strcmp(sys_call, 'NOTR') == 0) {
                         // no VM tracing; stop the tracing output
                     }
@@ -237,16 +239,16 @@ int main(int argc, char *argv[]){
                             pc = pc + off;
                     } else if (strcmp(jump_call, 'LBU') == 0) {
                         // memory
-                        rt = machine_types_zeroExt(memory.words[rs + off]);
+                        rt = machine_types_zeroExt(memory.bytes[rs + off]);
                     } else if (strcmp(jump_call, 'LW') == 0) {
                         // memory
-                        rt = memory.words[rs + off];
+                        rt = memory.words[(rs + off) / BYTES_PER_WORD];
                     } else if (strcmp(jump_call, 'SB') == 0) {
                         // memory
                         memory.bytes[rs + off] = rt;
                     } else if (strcmp(jump_call, 'SW') == 0) {
                         // memory
-                        memory.words[rs + off] = rt;
+                        memory.words[(rs + off) / BYTES_PER_WORD] = rt;
                     }
                     break;
                 // jump instructions
