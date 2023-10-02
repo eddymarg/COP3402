@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
@@ -13,7 +12,6 @@
 #include "assemble.h"
 #include "ast.h"
 #include "disasm.h"
-#include "disasm.c"
 #include "file_location.h"
 #include "id_attrs.h"
 #include "lexer.h"
@@ -27,15 +25,17 @@
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
-//BYTES_PER_WORD = 4;
+#define NUM_REG 32
 
-// // this might not be needed
-//program counter;
-static int PC; 
-//stack pointer;
-//static int SP; 
-//Global pointer
-// static int GP; 
+
+// program counter;
+static word_type pc; 
+// stack pointer;
+static word_type gp; 
+// Global pointer
+static word_type fp; 
+// storing number in each registers
+static word_type arr[NUM_REG];
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -61,13 +61,6 @@ static union mem_u {
     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 } memory;
 
-/*
-for (int i = 0; i < j; i++)
-{
-    memory.instr[i] = instruction_read(bf);
-}
-*/
-
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
 }
@@ -84,64 +77,157 @@ int main(int argc, char *argv[]){
     // make function that executes single instruction and handles tracing and call function to execute each instruction in a loop
 
 
-    if (argc < 3){
+    if (argc < 2){
         usage();
+        return EXIT_FAILURE;
     }
-
     // attempt to implement the -p option
     if (strcmp(argv[1], "-p") == 0) {
-        const char *bofname = argv[2]; // name of bof file to read
-
+        const char *bofname = argv[2];
         BOFFILE bf = bof_read_open(bofname);
+        // BOFHeader bof_header = bof_read_header(bf);
+
+        // // loading instructions into memory
+        // for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
+        //     bin_instr_t instruction = instruction_read(bf);
+        //     memory.instrs[PC] = instruction;
+        // }
+
+        // // loading data into memory
+        // for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+        //     memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+        // }
 
         disasmProgram(stdout, bf);
-
-        printf("success");
-
         return EXIT_SUCCESS;
-    }
+    } else {
+        const char *bofname = argv[1];
+        BOFFILE bf = bof_read_open(bofname);
+        BOFHeader bof_header = bof_read_header(bf);
 
-    const char *bofname = argv[0];
-    BOFFILE bf = bof_read_open(bofname);
-    BOFHeader bof_header = bof_read_header(bf);
+        // loading instruction into memory
+        for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
+            bin_instr_t instruction = instruction_read(bf);
+            memory.instrs[i] = instruction;
+        }
 
-    // loading instruction into memory
-    for (PC = 0; PC < bof_header.text_length / BYTES_PER_WORD; PC++) {
-        bin_instr_t instruction = instruction_read(bf);
-        memory.instrs[PC] = instruction;
-    }
+        // loading data into memory
+        for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+            memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+        }
 
-    // loading data into memory
-    for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
-        memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
-    }
+        pc = bof_header.text_start_address;
+        gp = bof_header.data_start_address;
+        fp = bof_header.stack_bottom_addr;
 
     // 3 different types of instructions + system call
     // Register, Immediate, Jump
+    while (pc >= 0 && pc < MEMORY_SIZE_IN_WORDS) {
+        bin_instr_t curr_instr = memory.instrs[pc];
+        instr_type type = instruction_type(curr_instr);
 
-    // use opcode?
-    // just need a way to differentiate through the 3 different types.
-    //int instr_num = textlength/bytes_per_word
-    for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
-        instr_type in_type = instruction_type(memory.instrs[i]); 
-        switch(in_type){
-        // system call
-        case syscall_instr_type:
-            
+        switch(type) {
+            case syscall_instr_type:
+                handle_syscall(curr_instr, &pc, gp, memory.words);
+                pc++;
+                break;
+            case reg_instr_type:
+                handle_reg_instr(curr_instr);
+                pc++;
+                break;
+            case immed_instr_type:
+                handle_immed_instr(curr_instr);
+                pc++;
+                break;
+            case jump_instr_type:
+                pc = handle_jmp_instr(curr_instr);
+                break;
+            default:
+                perror("Unknown instruction type");
+                return EXIT_FAILURE;
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+void handle_syscall(bin_instr_t instruction) {
+    syscall_code code = instruction.immed_data.data.syscall_code;
+    switch (code){
+        case ADD_SYSCALL:
             break;
-        // register instructions
-        case reg_instr_type:
+        case SUB_SYSCALL:
             break;
-        // jump instructions
-        case jump_instr_type:
+        case MUL_SYSCALL:
+            break:
+        case DIV_SYSCALL:
             break;
-        // immediate instructions
-        case immed_instr_type:
-            break;
-        default: 
-            perror("instruction type error");
-    
+        defauly
     }
 }
 
+void handle_reg_instr(bin_instr_t instruction) {
+    opcode_type opcode = instruction.opcode; //where is opcode_type defined
+    reg_idx_type rs = instruction.regs[0];
+    reg_idx_type rt = instruction.regs[1];
+    reg_idx_type rd = instruction.regs[2];
 
+    switch(opcode) {
+        case ADD_OP:
+            arr[rd] = arr[rs] + arr[rt];
+            break;
+        case SUB_OP:
+            arr[rd] = arr[rs] - arr[rt];
+            break;
+        case MUL_OP:
+            arr[rd] = arr[rs] * arr[rt];
+            break;
+        case DIV_OP:
+            arr[rd] = arr[rs] / arr[rt];
+            break;
+        default:
+            perror("Unknown register instruction");
+            exit(EXIT_FAILURE);   
+    } 
+}
+
+void handle_immediate_instruction(bin_instr_t instruction) {
+    // Handle immediate instructions (e.g., ADDI, SUBI, MULI, DIVI)
+    // Extract opcode, registers, and immediate value from instruction
+    opcode_type opcode = instruction.opcode;
+    reg_idx_type rs = instruction.regs[0];
+    reg_idx_type rt = instruction.regs[1];
+    int immediate = instruction.immed_data.data.immed;
+
+    // Perform operation based on opcode
+    switch (opcode) {
+        case ADDI_OP:
+            arr[rt] = arr[rs] + immediate;
+            break;
+        case SUBI_OP:
+            arr[rt] = arr[rs] - immediate;
+            break;
+        case MULI_OP:
+            arr[rt] = arr[rs] * immediate;
+            break;
+        case DIVI_OP:
+            arr[rt] = arr[rs] / immediate;
+            break;
+        default:
+            perror("Unknown immediate instruction");
+            exit(EXIT_FAILURE);
+    }
+}
+
+word_type handle_jump_instruction(bin_instr_t instruction) {
+    // Handle jump instruction (JMP)
+    // Extract jump target address from instruction
+    int jump_address = instruction.immed_data.data.lora.addr;
+
+    // Check if the jump address is within valid memory range
+    if (jump_address >= 0 && jump_address < MEMORY_SIZE_IN_WORDS) {
+        return jump_address;
+    } else {
+        perror("Invalid jump address");
+        exit(EXIT_FAILURE);
+    }
+}
