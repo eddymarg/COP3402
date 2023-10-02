@@ -29,13 +29,15 @@
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
 
-// // this might not be needed
-//program counter;
-static int PC; 
-//stack pointer;
-// static int SP; 
-//Global pointer
-// static int GP; 
+
+// program counter;
+static word_type pc; 
+// stack pointer;
+static word_type gp; 
+// Global pointer
+static word_type fp; 
+// storing number in each registers
+static word_type arr[32];
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -60,13 +62,6 @@ static union mem_u {
     word_type words[MEMORY_SIZE_IN_WORDS];
     bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 } memory;
-
-/*
-for (int i = 0; i < j; i++)
-{
-    memory.instr[i] = instruction_read(bf);
-}
-*/
 
 void usage() {
     bail_with_error("Usage: %s file.bof", progname);
@@ -107,6 +102,51 @@ int main(int argc, char *argv[]){
         disasmProgram(stdout, bf);
         return EXIT_SUCCESS;
     } else {
+        const char *bofname = argv[1];
+        BOFFILE bf = bof_read_open(bofname);
+        BOFHeader bof_header = bof_read_header(bf);
+
+        // loading instruction into memory
+        for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
+            bin_instr_t instruction = instruction_read(bf);
+            memory.instrs[i] = instruction;
+        }
+
+        // loading data into memory
+        for (int i = 0; i < bof_header.data_length / BYTES_PER_WORD; i++) {
+            memory.words[bof_header.data_start_address + i] = bof_read_word(bf);
+        }
+
+        pc = bof_header.text_start_address;
+        gp = bof_header.data_start_address;
+        fp = bof_header.stack_bottom_addr;
+
+    // 3 different types of instructions + system call
+    // Register, Immediate, Jump
         
+        // use opcode?
+        // just need a way to differentiate through the 3 different types.
+        //int instr_num = textlength/bytes_per_word
+        for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
+            instr_type in_type = instruction_type(memory.instrs[i]); 
+            switch(in_type){
+                // system call
+                case syscall_instr_type:
+                    
+                    break;
+                // register instructions
+                case reg_instr_type:
+                    break;
+                // jump instructions
+                case jump_instr_type:
+                    break;
+                // immediate instructions
+                case immed_instr_type:
+                    break;
+                default: 
+                    perror("instruction type error");
+            }
+        
+        }
     }
 }
