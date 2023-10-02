@@ -4,14 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "instruction.h"
 #include "machine_types.h"
 #include "bof.h"
+// #include "bof.c"
 #include "asm_unparser.h"
 #include "asm.tab.h"
 #include "assemble.h"
 #include "ast.h"
 #include "disasm.h"
+#include "disasm.c"
 #include "file_location.h"
 #include "id_attrs.h"
 #include "lexer.h"
@@ -25,17 +28,18 @@
 #define MEMORY_SIZE_IN_BYTES (65536 - BYTES_PER_WORD)
 #define MEMORY_SIZE_IN_WORDS (MEMORY_SIZE_IN_BYTES / BYTES_PER_WORD)
 static char *progname; // maybe change this? idk what this means
-#define NUM_REG 32
 
 
 // program counter;
-static word_type pc; 
+static address_type pc; 
 // stack pointer;
 static word_type gp; 
 // Global pointer
 static word_type fp; 
 // storing number in each registers
-static word_type arr[NUM_REG];
+static word_type GPR[32];
+static int32_t hi; 
+static int32_t lo; 
 
 // will halt with error message if one of these violated:
 //PC % BYTES_PER_WORD = 0;
@@ -45,7 +49,7 @@ static word_type arr[NUM_REG];
 // 0 <= GPR[$gp];
 // GPR[$gp] <= GPR[$sp];
 // GPR[$sp] <= GPR[$fp];
-// GPR[$fp] <=MAX_STACK_HEIGHT;
+// GPR[$fp] <= MEMORY_SIZE_IN_BYTES;
 // 0 <= PC
 // PC < MEMORY_SIZE_IN_BYTES && GPR[0] = 0
 
@@ -79,7 +83,6 @@ int main(int argc, char *argv[]){
 
     if (argc < 2){
         usage();
-        return EXIT_FAILURE;
     }
     // attempt to implement the -p option
     if (strcmp(argv[1], "-p") == 0) {
@@ -122,112 +125,158 @@ int main(int argc, char *argv[]){
 
     // 3 different types of instructions + system call
     // Register, Immediate, Jump
-    while (pc >= 0 && pc < MEMORY_SIZE_IN_WORDS) {
-        bin_instr_t curr_instr = memory.instrs[pc];
-        instr_type type = instruction_type(curr_instr);
+        
+        // use opcode?
+        // just need a way to differentiate through the 3 different types.
+        //int instr_num = textlength/bytes_per_word
+        for (int i = 0; i < bof_header.text_length / BYTES_PER_WORD; i++) {
+            bin_instr_t bi = memory.instrs[i];
+            instr_type in_type = instruction_type(bi); 
+            switch(in_type){
+                // system call
+                case syscall_instr_type:
+                    syscall_type code = instruction_syscall_number(bi);
+                    char* sys_call = instruction_syscall_mnemonic(code);
+                    
+                    if (strcmp(sys_call, 'EXIT') == 0) {
+                        exit(0);
+                    } else if (strcmp(sys_call, 'PSTR') == 0) {
+                        // memory
+                        GPR[2] = printf("%s", &memory.words[GPR[4]]);
+                    } else if (strcmp(sys_call, 'PCH') == 0) {
+                        GPR[2] = fputc(GPR[4], stdout);
+                    } else if (strcmp(sys_call, 'RCH') == 0) {
+                        GPR[2] = getc(stdin);
+                    } else if (strcmp(sys_call, 'STRA') == 0) {
+                        // start VM tracing; start tracing output
+                    } else if (strcmp(sys_call, 'NOTR') == 0) {
+                        // no VM tracing; stop the tracing output
+                    }
+                    break;
+                
+                // register instructions
+                case reg_instr_type:
+                    char* reg_call = instruction_func2name(bi);
+                
+                    int rd = (int)GPR[bi.reg.rd];
+                    int rs = (int)GPR[bi.reg.rs];
+                    int rt = (int)GPR[bi.reg.rt];
 
-        switch(type) {
-            case syscall_instr_type:
-                handle_syscall(curr_instr, &pc, gp, memory.words);
-                pc++;
-                break;
-            case reg_instr_type:
-                handle_reg_instr(curr_instr);
-                pc++;
-                break;
-            case immed_instr_type:
-                handle_immed_instr(curr_instr);
-                pc++;
-                break;
-            case jump_instr_type:
-                pc = handle_jmp_instr(curr_instr);
-                break;
-            default:
-                perror("Unknown instruction type");
-                return EXIT_FAILURE;
+                    if (strcmp(reg_call, 'ADD') == 0) {
+                        rd = rs + rt;
+                    } else if (strcmp(reg_call, 'SUB') == 0) {
+                        rd = rs - rt;
+                    } else if (strcmp(reg_call, 'MUL') == 0) {
+                        int64_t result = (int64_t)rs * (int64_t)rt;
+                        lo = (int32_t)result;
+                        hi = (int32_t)(result >> 32);
+                    } else if (strcmp(reg_call, 'DIV') == 0) {
+                        if (rt == 0) {
+                            // error
+                        }
+                        hi = rs % rt;
+                        lo = rs / rt;
+                    } else if (strcmp(reg_call, 'MFHI') == 0) {
+                        rd = hi;
+                    } else if (strcmp(reg_call, 'MFLO') == 0) {
+                        rd = lo;
+                    } else if (strcmp(reg_call, 'AND') == 0) {
+                        rd = rs & rt;
+                    } else if (strcmp(reg_call, 'BOR') == 0) {
+                        rd = rs | rt;
+                    } else if (strcmp(reg_call, 'NOR') == 0) {
+                        rd = ~(rs | rt);
+                    } else if (strcmp(reg_call, 'XOR') == 0) {
+                        rd = rs ^ rt;
+                    } else if (strcmp(reg_call, 'SLL') == 0) {
+                        rd = rt << bi.reg.shift;
+                    } else if (strcmp(reg_call, 'SRL') == 0) {
+                        rd = rt >> bi.reg.shift;
+                    } else if (strcmp(reg_call, 'JR') == 0) {
+                        pc = rs;
+                    }    
+                    // } else if (strcmp(reg_call, 'SYSCALL') == 0) {
+                        
+                    // }
+                    break;
+                // immediate instructions
+                case immed_instr_type:
+                    char* jump_call = instruction_mnemonic(bi);
+
+                    int rs = (int)GPR[bi.reg.rs];
+                    int rt = (int)GPR[bi.reg.rt];
+                    immediate_type im = bi.immed.immed;
+                    unsigned int zero_ex_im = machine_types_zeroExt(im);
+                    int off = machine_types_formOffset(im);
+
+                    if (strcmp(jump_call, 'ADDI') == 0) {
+                        rt = rs + machine_types_sgnExt(im);
+                    } else if (strcmp(jump_call, 'ANDI') == 0) {
+                        rt = rs & zero_ex_im;
+                    } else if (strcmp(jump_call, 'BORI') == 0) {
+                        rt = rs | zero_ex_im;
+                    } else if (strcmp(jump_call, 'XORI') == 0) {
+                        rt = rs ^ zero_ex_im;
+                    } else if (strcmp(jump_call, 'BEQ') == 0) {
+                        if (rs == rt)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'BGEZ') == 0) {
+                        if (rs >= 0)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'BGTZ') == 0) {
+                        if (rs > 0)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'BLEZ') == 0) {
+                        if (rs <= 0)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'BLTZ') == 0) {
+                        if (rs < 0)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'BNE') == 0) {
+                        if (rs != rt)
+                            pc = pc + off;
+                    } else if (strcmp(jump_call, 'LBU') == 0) {
+                        // memory
+                        rt = machine_types_zeroExt(memory.words[rs + off]);
+                    } else if (strcmp(jump_call, 'LW') == 0) {
+                        // memory
+                        rt = memory.words[rs + off];
+                    } else if (strcmp(jump_call, 'SB') == 0) {
+                        // memory
+                        memory.bytes[rs + off] = rt;
+                    } else if (strcmp(jump_call, 'SW') == 0) {
+                        // memory
+                        memory.words[rs + off] = rt;
+                    }
+                    break;
+                // jump instructions
+                case jump_instr_type:
+                    unsigned short op = bi.jump.op;
+                    address_type add = bi.jump.addr;
+                    if (op == 2) {
+                        pc = machine_types_formAddress(pc, add);
+                    } else if (op == 3) {
+                        GPR[31] = pc;
+                        pc = machine_types_formAddress(pc, add);
+                    }
+                    break;
+                default: 
+                    perror("instruction type error");
+            }
+
+            // printing instructions
+            fprintf("\tPC: %d", pc);
+            fprintf("GPR[$0 ]: 0\tGPR[$at]: %d\tGPR[$v0]: %d\tGPR[$v1]: %d\tGPR[$a0]: %d\tGPR[$a1]:\n", GPR[1], GPR[2], GPR[3], GPR[4], GPR[5]);
+            fprintf("GPR[$a2]: %d\tGPR[$a3]: %d\tGPR[$t0]: %d\tGPR[$t1]: %d\tGPR[$t2]: %d\tGPR[$t3]: %d\n", GPR[6], GPR[7], GPR[8], GPR[9], GPR[10], GPR[11]);
+            fprintf("GPR[$t4]: %d\tGPR[$t5]: %d\tGPR[$t6]: %d\tGPR[$t7]: %d\tGPR[$s0]: %d\tGPR[$s1]: %d\n", GPR[12], GPR[13], GPR[14], GPR[15], GPR[16], GPR[17]);
+            fprintf("GPR[$s2]: %d\tGPR[$s3]: %d\tGPR[$s4]: %d\tGPR[$s5]: %d\tGPR[$s6]: %d\tGPR:[$s7]: %d\n", GPR[18], GPR[19], GPR[20], GPR[21], GPR[22], GPR[23]);
+            fprintf("GPR[$t8]: %d\tGPR[$t9]: %d\tGPR[$k0]: %d\tGPR[$k1]: %d\tGPR[$gp]: %d\t GPR[$sp]: %d\n", GPR[24], GPR[25], GPR[26], GPR[27], GPR[28], GPR[29]);
+            fprintf("GPR[$fp]: %d\tGPR[$ra]: %d\n", GPR[30], GPR[31]);
+
+            // idk what 1024 is
+            //fprintf("%d", );
+            // then it has to print instructions?
+            //fprintf("==> %s: ")
         }
-    }
-    return EXIT_SUCCESS;
-}
-
-void handle_syscall(bin_instr_t instruction) {
-    syscall_code code = instruction.immed_data.data.syscall_code;
-    switch (code){
-        case ADD_SYSCALL:
-            break;
-        case SUB_SYSCALL:
-            break;
-        case MUL_SYSCALL:
-            break:
-        case DIV_SYSCALL:
-            break;
-        defauly
-    }
-}
-
-void handle_reg_instr(bin_instr_t instruction) {
-    opcode_type opcode = instruction.opcode; //where is opcode_type defined
-    reg_idx_type rs = instruction.regs[0];
-    reg_idx_type rt = instruction.regs[1];
-    reg_idx_type rd = instruction.regs[2];
-
-    switch(opcode) {
-        case ADD_OP:
-            arr[rd] = arr[rs] + arr[rt];
-            break;
-        case SUB_OP:
-            arr[rd] = arr[rs] - arr[rt];
-            break;
-        case MUL_OP:
-            arr[rd] = arr[rs] * arr[rt];
-            break;
-        case DIV_OP:
-            arr[rd] = arr[rs] / arr[rt];
-            break;
-        default:
-            perror("Unknown register instruction");
-            exit(EXIT_FAILURE);   
-    } 
-}
-
-void handle_immediate_instruction(bin_instr_t instruction) {
-    // Handle immediate instructions (e.g., ADDI, SUBI, MULI, DIVI)
-    // Extract opcode, registers, and immediate value from instruction
-    opcode_type opcode = instruction.opcode;
-    reg_idx_type rs = instruction.regs[0];
-    reg_idx_type rt = instruction.regs[1];
-    int immediate = instruction.immed_data.data.immed;
-
-    // Perform operation based on opcode
-    switch (opcode) {
-        case ADDI_OP:
-            arr[rt] = arr[rs] + immediate;
-            break;
-        case SUBI_OP:
-            arr[rt] = arr[rs] - immediate;
-            break;
-        case MULI_OP:
-            arr[rt] = arr[rs] * immediate;
-            break;
-        case DIVI_OP:
-            arr[rt] = arr[rs] / immediate;
-            break;
-        default:
-            perror("Unknown immediate instruction");
-            exit(EXIT_FAILURE);
-    }
-}
-
-word_type handle_jump_instruction(bin_instr_t instruction) {
-    // Handle jump instruction (JMP)
-    // Extract jump target address from instruction
-    int jump_address = instruction.immed_data.data.lora.addr;
-
-    // Check if the jump address is within valid memory range
-    if (jump_address >= 0 && jump_address < MEMORY_SIZE_IN_WORDS) {
-        return jump_address;
-    } else {
-        perror("Invalid jump address");
-        exit(EXIT_FAILURE);
     }
 }
