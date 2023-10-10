@@ -74,14 +74,15 @@ static void number2ast(unsigned int val)
 
  /* you can add actual definitions below */
 
-    DIGIT       [0-9]
-    LETTER      [a-zA-Z]
-    WHITESPACE  [ \t\n]
-
-
  /* the rules section starts after the %% below */
 
 %%
+
+/* fill in the rules for your lexer here! */
+
+    DIGIT       [0-9]
+    LETTER      [a-zA-Z]
+    WHITESPACE  [ \t\n]
 
     "if"            { return IF; }
     "else"          { return ELSE; }
@@ -113,8 +114,6 @@ static void number2ast(unsigned int val)
     {WHITESPACE}+   /* Skip whitespace */
 
     .               { printf("Error: Unknown token\n"); }
-
-/* fill in the rules for your lexer here! */
 
 /* $Id: pl0_lexer_user_code.c,v 1.3 2023/10/06 11:12:37 leavens Exp leavens $ */
 
