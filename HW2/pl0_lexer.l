@@ -74,15 +74,39 @@ static void number2ast(unsigned int val)
 
  /* you can add actual definitions below */
 
+    DIGIT       [0-9]
+    LETTER      [a-zA-Z]
+    WHITESPACE  [ \t\n]
+
+ /* Tokens */
+    %token IF
+    %token ELSE
+    %token WHILE
+    %token INT
+    %token NUMBER
+    %token IDENTIFIER
+    %token EQUAL
+    %token NOTEQUAL
+    %token GREATEREQUAL
+    %token GREATER
+    %token LESSEQUAL
+    %token LESS
+    %token PLUS
+    %token MINUS
+    %token MULTIPLY
+    %token DIVIDE
+    %token ASSIGN
+    %token SEMICOLON
+    %token LPAREN
+    %token RPAREN
+    %token LBRACE
+    %token RBRACE
+
  /* the rules section starts after the %% below */
 
 %%
 
 /* fill in the rules for your lexer here! */
-
-    DIGIT       [0-9]
-    LETTER      [a-zA-Z]
-    WHITESPACE  [ \t\n]
 
     "if"            { return IF; }
     "else"          { return ELSE; }
