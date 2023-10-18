@@ -121,6 +121,7 @@ ODD             "odd"
 
 %%
 
+\n              { yylineno++; }
 {COMMENT}       { ; }
 {IGNORED}       { ; }
 
