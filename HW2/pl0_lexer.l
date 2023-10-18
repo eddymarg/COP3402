@@ -73,7 +73,7 @@ static void number2ast(unsigned int val)
 static void numberTooBig()
 {
     char msgbuf[522];
-    snprintf(msgbuf, 522, "Number too large (%s)!", yytext);
+    snprintf(msgbuf, 522, "Number (%s) is too large!", yytext);
     yyerror(lexer_filename(), msgbuf);
 }
 
@@ -173,7 +173,7 @@ GEQ             ">="
                         return numbersym;
                     }
                     }
-    {DIGIT}+        { numberTooBig(); }
+    {DIGIT}+        { numberTooBig(); printf("%-6d %-4d \"%s\"\n", numbersym, yylineno, yytext);}
 .   { char msgbuf[512];
       sprintf(msgbuf, "invalid character: '%c' ('\\0%o')", *yytext, *yytext);
       yyerror(lexer_filename(), msgbuf);
