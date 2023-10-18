@@ -115,6 +115,11 @@ READ            "read"
 WRITE           "write"
 SKIP            "skip"
 ODD             "odd"
+NEQ             "<>"
+LT              "<"
+LEQ             "<="
+GT              ">"
+GEQ             ">="
     /*WHITESPACE  [ \t\n]*/
 
  /* the rules section starts after the %% below */
@@ -141,6 +146,10 @@ ODD             "odd"
 {SKIP}          { tok2ast(skipsym); return skipsym; }
 {ODD}           { tok2ast(oddsym); return oddsym; }
 {IDENT}         { ident2ast(yytext); return identsym; }
+{PLUS}          { tok2ast(plussym); return plussym; }
+{MINUS}         { tok2ast(minussym); return minussym; }
+{MULT}          { tok2ast(multsym); return multsym; }
+{DIV}           { tok2ast(divsym); return divsym; }
 {PERIOD}        { tok2ast(periodsym); return periodsym; }
 {SEMISYM}       { tok2ast(semisym); return semisym; }
 {EQUAL}         { tok2ast(eqsym); return eqsym; }
@@ -148,6 +157,12 @@ ODD             "odd"
 {BECOMES}       { tok2ast(becomessym); return becomessym;}
 {LPAREN}        { tok2ast(lparensym); return lparensym; }
 {RPAREN}        { tok2ast(rparensym); return rparensym; }
+{NEQ}           { tok2ast(neqsym); return neqsym; }
+{LT}            { tok2ast(ltsym); return ltsym; }
+{LEQ}           { tok2ast(leqsym); return leqsym; }
+{GT}            { tok2ast(gtsym); return gtsym; }
+{GEQ}           { tok2ast(geqsym); return geqsym; }
+
 
 {DIGIT}{1,5}    { unsigned int ui;
                     sscanf(yytext, "%u", &ui);
