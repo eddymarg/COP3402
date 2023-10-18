@@ -174,7 +174,10 @@ GEQ             ">="
                     }
                     }
     {DIGIT}+        { numberTooBig(); }
-
+.   { char msgbuf[512];
+      sprintf(msgbuf, "invalid character: '%c' ('\\0%o')", *yytext, *yytext);
+      yyerror(lexer_filename(), msgbuf);
+    }
 %%
 
 /* This code goes in the user code section of the pl0_lexer.l file,
