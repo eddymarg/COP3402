@@ -94,7 +94,12 @@ MINUS           "-"
 MULT            "*"
 DIV             "/"
 EQUAL           "="
-SEMISYM         ;
+PERIOD          "."
+SEMISYM         ";"
+COMMASYM        ","
+BECOMES         ":="
+LPAREN          "("
+RPAREN          ")"
 CONST           "const"
 VAR             "var"
 PROCEDURE       "procedure"
@@ -135,11 +140,14 @@ ODD             "odd"
 {SKIP}          { tok2ast(skipsym); return skipsym; }
 {ODD}           { tok2ast(oddsym); return oddsym; }
 {IDENT}         { ident2ast(yytext); return identsym; }
-.               { tok2ast(periodsym); return periodsym; }
+{PERIOD}        { tok2ast(periodsym); return periodsym; }
 {SEMISYM}       { tok2ast(semisym); return semisym; }
-=               { tok2ast(eqsym); return eqsym; }
-,               { tok2ast(commasym); return commasym;}
-:=              { tok2ast(becomessym); return becomessym;}            
+{EQUAL}         { tok2ast(eqsym); return eqsym; }
+{COMMASYM}      { tok2ast(commasym); return commasym;}
+{BECOMES}       { tok2ast(becomessym); return becomessym;}
+{LPAREN}        { tok2ast(lparensym); return lparensym; }
+{RPAREN}        { tok2ast(rparensym); return rparensym; }
+
 {DIGIT}{1,5}    { unsigned int ui;
                     sscanf(yytext, "%u", &ui);
                     if (USHRT_MAX < ui) {
