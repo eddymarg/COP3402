@@ -70,6 +70,13 @@ static void number2ast(unsigned int val)
     yylval = t;
 }
 
+static void numberTooBig()
+{
+    char msgbuf[522];
+    snprintf(msgbuf, 522, "Number too large (%s)!", yytext);
+    yyerror(lexer_filename(), msgbuf);
+}
+
 %}
 
  /* you can add actual definitions below */
@@ -135,8 +142,14 @@ ODD             "odd"
 :=              { tok2ast(becomessym); return becomessym;}            
 {DIGIT}{1,5}    { unsigned int ui;
                     sscanf(yytext, "%u", &ui);
+                    if (USHRT_MAX < ui) {
+                        numberTooBig();
+                    } else {
                         number2ast(ui); 
-                        return numbersym; }
+                        return numbersym;
+                    }
+                    }
+    {DIGIT}+        { numberTooBig(); }
 
 %%
 
