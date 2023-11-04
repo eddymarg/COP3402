@@ -114,10 +114,73 @@ extern void setProgAST(block_t t);
 %%
  /* Write your grammar rules below and before the next %% */
 
+    program: block periodsym { setProgAST($1); }
 
+    block: constDecls varDecls procDecls stmt {
+        $$ = createBlock($1, $2, $3, $4);
+    }
 
+    constDecls: constDecl { $$ = $1; } | { $$ = NULL; }
 
+    constDecl: constsym constDefs semisym { $$ = createConstDecl($2); }
 
+    constDefs: constDef { $$ = createConstDefs($1); } | constDefs commasym constDef { $$ = createConstDefs($3); }
+
+    constDef: identsym eqsym numbersym { $$ = createConstDef($1, $3); }
+
+    varDecls: varDecl { $$ = $1; } | { $$ = NULL; }
+
+    varDecl: varsym idents semisym { $$ = createVarDecl($2); }
+
+    idents: identsym { $$ = createIdents($1); } | idents commasym identsym { $$ = createIdents($1); }
+
+    procDecls: procDecl { $$ = $1; } | { $$ = NULL; }
+
+    procDecl: proceduresym identsym semisym block semisym { $$ = createProcDecl($2, $4); }
+
+    stmt: assignStmt { $$ = createStmt($1); } | callStmt { $$ = createStmt($1); } | beginStmt { $$ = createStmt($1); }
+    | ifStmt { $$ = createStmt($1); } | whileStmt { $$ = createStmt($1); } | readStmt { $$ = createStmt($1); } | writeStmt { $$ = createStmt($1); }
+    | skipStmt { $$ = createStmt($1); }
+
+    assignStmt: identsym becomessym expr { $$ = createAssignStmt($1, $3); }
+
+    callStmt: callsym identsym { $$ = createCallStmt($2); }
+
+    beginStmt: beginsym stmts endsym { $$ = createBeginStmt($2); }
+
+    ifStmt: ifsym condition thensym stmt elsesym stmt { $$ = createIfStmt($2, $4, $6); }
+
+    whileStmt: whilesym condition dosym stmt { $$ = createWhileStmt($2, $4); }
+
+    readStmt: readsym identsym { $$ = createReadStmt($2); }
+
+    writeStmt: writesym expr { $$ = createWriteStmt($2); }
+
+    skipStmt: skipsym { $$ = createSkipStmt(); }
+
+    stmts: stmt { $$ = createStmts($1); } | stmts semisym stmt { $$ = createStmts($3); }
+
+    condition: oddCondition { $$ = createCondition($1); } | relOpCondition { $$ = createCondition($1); }
+
+    oddCondition: oddsym expr { $$ = createOddCondition($2); }
+
+    relOpCondition: expr relOp expr { $$ = createRelOpCondition($1, $2, $3); }
+
+    expr: term { $$ = createExpr($1); } | expr plussym term { $$ = createBinaryExpr("+", $1, $3); }
+    | expr minussym term { $$ = createBinaryExpr("-", $1, $3); }
+
+    term: factor { $$ = createTerm($1); } | term multsym factor { $$ = createBinaryTerm("*", $1, $3); }
+    | term divsym factor { $$ = createBinaryTerm("/", $1, $3); }
+
+    factor: identsym { $$ = createFactor($1); } | minussym numbersym { $$ = createUnaryFactor("-", createNumberFactor($2)); }
+    | posSign numbersym { $$ = createUnaryFactor("+", createNumberFactor($2)); } | lparensym expr rparensym { $$ = $2; }
+
+    relOp: eqsym { $$ = "="; } | neqsym { $$ = "<>"; } | ltsym { $$ = "<"; } | leqsym { $$ = "<="; }
+    | gtsym { $$ = ">"; } | geqsym { $$ = ">="; }
+
+    posSign: plussym { $$ = "+"; } | empty { $$ = NULL; }
+
+    empty: /* empty */ { $$ = NULL; }
 %%
 
 // Set the program's ast to be ast
