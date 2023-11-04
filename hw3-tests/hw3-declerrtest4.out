@@ -1,0 +1,5 @@
+const x = 121, y = 122, z = 123;
+var a, y, c;
+skip
+.
+hw3-declerrtest4.pl0: line 3 variable "y" is already declared as a constant

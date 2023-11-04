@@ -1,0 +1,3 @@
+x := 0
+.
+hw3-declerrtest0.pl0: line 2 identifier "x" is not declared!

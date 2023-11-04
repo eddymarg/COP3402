@@ -1,0 +1,17 @@
+const w = 99, x = 100;
+const y = 122, z = 123;
+var a, b;
+var c, d;
+while a < w
+do
+  begin
+    c := ((y / z) * x);
+    d := w;
+    if odd ((c - (d * e)) - b)
+    then
+      e := 3
+    else
+      e := f
+  end
+.
+hw3-declerrtest9.pl0: line 11 identifier "e" is not declared!

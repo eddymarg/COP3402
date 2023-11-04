@@ -1,0 +1,7 @@
+# $Id: hw3-errtest5.pl0,v 1.1 2023/02/17 23:34:23 leavens Exp $
+var x;
+begin
+  x := 34-02;
+  # note: syntax error below, as conditions can't have parentheses around them
+  while (x <= 0) do x := x-1
+end.

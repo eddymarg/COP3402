@@ -1,0 +1,7 @@
+# $Id: hw3-asttest2.pl0,v 1.1 2023/02/19 20:12:22 leavens Exp $ 
+var x;
+var y;
+begin
+  x := 3;
+  y := x
+end.
