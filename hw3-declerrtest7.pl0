@@ -1,0 +1,19 @@
+# $Id: hw3-declerrtest7.pl0,v 1.1 2023/02/19 20:12:22 leavens Exp $
+const x = 121, y = 122, z = 123;
+var a, b, c;
+begin
+    x := y - z - z;
+    a := 2;
+    if x < y
+    then
+        begin z := x;
+              y := y-x+2*3/4*7*a
+        end
+    else
+        while x > y
+        do
+            begin
+               x := x-1;
+               y := 3*(y+(4*q)) - 7*z
+            end
+end.

@@ -1,0 +1,6 @@
+const x = 10;
+procedure nested;
+  const x = 3;
+  write x;
+call nested
+.

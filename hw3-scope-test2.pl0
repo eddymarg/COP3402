@@ -1,0 +1,16 @@
+# $Id: hw3-scope-test2.pl0,v 1.3 2023/10/20 00:41:22 leavens Exp $
+var arg;
+procedure countDown;
+  begin
+    write arg;
+    if arg <= 0
+    then skip
+    else begin
+           arg := arg - 1;
+  	   call countDown
+         end
+  end;
+begin
+  arg := 4;
+  call countDown
+end.

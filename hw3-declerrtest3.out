@@ -1,0 +1,5 @@
+const x = 121;
+var x;
+skip
+.
+hw3-declerrtest3.pl0: line 3 variable "x" is already declared as a constant

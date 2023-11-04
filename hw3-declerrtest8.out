@@ -1,0 +1,9 @@
+const y = 122, z = 123;
+var a, b, c;
+begin
+  a := 3;
+  y := ((z * a) + (b / c));
+  write x
+end
+.
+hw3-declerrtest8.pl0: line 7 identifier "x" is not declared!

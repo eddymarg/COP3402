@@ -1,0 +1,8 @@
+# $Id: hw3-declerrtest8.pl0,v 1.1 2023/02/19 21:02:05 leavens Exp $
+const y = 122, z = 123;
+var a, b, c;
+begin
+    a := 3;
+    y := z * a+b/c;
+    write x
+end.

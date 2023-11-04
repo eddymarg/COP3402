@@ -1,0 +1,4 @@
+# $Id: hw3-declerrtest4.pl0,v 1.1 2023/02/19 20:12:22 leavens Exp $
+const x = 121, y = 122, z = 123;
+var a, y, c;  # error, duplicate declaration!
+skip.

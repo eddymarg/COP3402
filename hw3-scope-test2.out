@@ -1,0 +1,18 @@
+var arg;
+procedure countDown;
+  begin
+    write arg;
+    if arg <= 0
+    then
+      skip
+    else
+      begin
+        arg := (arg - 1);
+        call countDown
+      end
+  end;
+begin
+  arg := 4;
+  call countDown
+end
+.

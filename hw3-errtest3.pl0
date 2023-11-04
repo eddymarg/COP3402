@@ -1,0 +1,4 @@
+# $Id: hw3-errtest3.pl0,v 1.5 2023/10/19 23:54:25 leavens Exp $
+
+some illegal characters!
+  and this stuff: !@#%&*()(*_|

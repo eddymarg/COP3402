@@ -1,0 +1,7 @@
+# $Id: hw3-declerrtest2.pl0,v 1.1 2023/02/19 20:12:22 leavens Exp $
+const nl = 10, x = 120, y = 121,
+                        x = 170; # duplicate declaration of x!
+begin
+  write y;
+  write nl
+end.

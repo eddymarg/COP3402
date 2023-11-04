@@ -1,0 +1,50 @@
+# $Id: hw3-asttestA.pl0,v 1.2 2023/02/20 19:29:01 leavens Exp $
+const a = 1, b = 2;
+const c = 3, d = 4, e = 5, f = 6;
+var x, y, z;
+begin
+  x := d - e - f*33 / b;
+  y := x+1-2-3*4;
+  if 0 <> y
+  then
+     z := y+100*1-c
+  else
+     z := 5/x - 3*x + 1*d/e;
+  if z >= 0
+  then
+     if x-2+1 > f+3-4
+     then
+       if 10*y+a <= 10*z-b
+       then
+         if odd c
+         then
+            if (6*d*5 - e-f) = (x*(10/b)-b)
+            then
+              if odd x-c-d-e-f/a
+              then
+                 write 67*c
+              else
+                 begin
+                   read z;
+                   write z*10-f;
+                   while z*10-f < a-a
+                   do
+                     begin
+                        z := z - a/(b/(b+0));
+                        write z;
+                        write 10
+                     end
+                 end
+            else
+              x := 3
+         else
+           y := 2*c - c
+       else
+          skip
+     else
+       skip
+   else
+     skip
+end.
+
+                  

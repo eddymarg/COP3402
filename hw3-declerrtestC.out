@@ -1,0 +1,7 @@
+const nl = 10, x = 120, y = 121, x = 170;
+begin
+  write y;
+  write nl
+end
+.
+hw3-declerrtestC.pl0: line 3 constant "x" is already declared as a constant

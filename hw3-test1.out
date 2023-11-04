@@ -1,0 +1,5 @@
+begin
+  write 49;
+  write 10
+end
+.

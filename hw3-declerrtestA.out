@@ -1,0 +1,29 @@
+const w = 99, x = 100;
+const y = 122, z = 123;
+var a, b;
+var c, d;
+while a < w
+do
+  begin
+    c := ((y / z) * x);
+    d := w;
+    if c = d
+    then
+      if ((a * b) / w) < ((w * a) / b)
+      then
+        if ((c / d) / e) >= ((w / x) / z)
+        then
+          a := 3
+        else
+          b := 2
+      else
+        if ((y / z) - (w * x)) > (((w * z) / y) - z)
+        then
+          c := 1
+        else
+          d := (-4 - 5)
+    else
+      e := f
+  end
+.
+hw3-declerrtestA.pl0: line 15 identifier "e" is not declared!
