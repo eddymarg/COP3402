@@ -1,0 +1,6 @@
+# $Id: hw3-scope-test0.pl0,v 1.1 2023/10/15 19:36:27 leavens Exp $
+const x = 10;
+procedure nested;
+  const x = 3;
+  write x;  # writes 3
+call nested.

@@ -1,0 +1,5 @@
+# $Id: hw3-test1.pl0,v 1.1 2023/02/13 02:08:09 leavens Exp $
+begin
+  write 49; # the character '1'
+  write 10  # a newline
+end.
