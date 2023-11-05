@@ -113,74 +113,91 @@ extern void setProgAST(block_t t);
 
 %%
  /* Write your grammar rules below and before the next %% */
+    
+    constDef : "const" identsym "=" numbersym { $$ = ast_const_def($2,$4); } ;
 
-    program: block periodsym { setProgAST($1); }
+    program : block periodsym { setProgAST($1); } ;
 
-    block: constDecls varDecls procDecls stmt {
-        $$ = createBlock($1, $2, $3, $4);
-    }
+    block : constDecls varDecls procDecls stmt { $$ = ast_block($1, $2, $3, $4); } ;
 
-    constDecls: constDecl { $$ = $1; } | { $$ = NULL; }
+    constDecls : empty { $$ = ast_const_decls_empty($1); }
+            | constDecls constDecl{ $$ = ast_const_decls($1, $2); } ;
 
-    constDecl: constsym constDefs semisym { $$ = createConstDecl($2); }
+    constDecl : constsym constDefs semisym { $$ = ast_const_decl($2); } ;
 
-    constDefs: constDef { $$ = createConstDefs($1); } | constDefs commasym constDef { $$ = createConstDefs($3); }
+    constDefs : constDef { $$ = ast_const_defs_singleton($1); }
+            | constDefs commasym constDef { $$ = ast_const_defs($1, $3); } ;
 
-    constDef: identsym eqsym numbersym { $$ = createConstDef($1, $3); }
+    constDef : identsym eqsym numbersym { $$ = ast_const_def($1, $3); } ;
 
-    varDecls: varDecl { $$ = $1; } | { $$ = NULL; }
+    varDecls : empty { $$ = ast_var_decls_empty($1); }
+            | varDecls varDecl { $$ = ast_var_decls($1, $2); } ;
 
-    varDecl: varsym idents semisym { $$ = createVarDecl($2); }
+    varDecl : varsym idents semisym { $$ = ast_var_decl($2); } ;
 
-    idents: identsym { $$ = createIdents($1); } | idents commasym identsym { $$ = createIdents($1); }
+    idents : identsym { $$ = ast_idents_singleton($1); }
+            | idents commasym identsym { $$ = ast_idents($1, $3); } ;
 
-    procDecls: procDecl { $$ = $1; } | { $$ = NULL; }
+    procDecls : empty { $$ = ast_proc_decls_empty($1); }
+            | procDecls procDecl { $$ = ast_proc_decls($1, $2); } ;
 
-    procDecl: proceduresym identsym semisym block semisym { $$ = createProcDecl($2, $4); }
+    procDecl : proceduresym identsym semisym block semisym { $$ = ast_proc_decl($2, $4); } ;
 
-    stmt: assignStmt { $$ = createStmt($1); } | callStmt { $$ = createStmt($1); } | beginStmt { $$ = createStmt($1); }
-    | ifStmt { $$ = createStmt($1); } | whileStmt { $$ = createStmt($1); } | readStmt { $$ = createStmt($1); } | writeStmt { $$ = createStmt($1); }
-    | skipStmt { $$ = createStmt($1); }
+    stmt : assignStmt { $$ = ast_stmt_assign($1); }
+        | callStmt { $$ = ast_stmt_call($1); }
+        | beginStmt { $$ = ast_stmt_begin($1); }
+        | ifStmt { $$ = ast_stmt_if($1); }
+        | whileStmt { $$ = ast_stmt_while($1); }
+        | readStmt { $$ = ast_stmt_read($1); }
+        | writeStmt { $$ = ast_stmt_write($1); }
+        | skipStmt { $$ = ast_stmt_skip($1); } ;
+        
+    assignStmt : identsym becomessym expr { $$ = ast_assign_stmt($1, $3); } ;
 
-    assignStmt: identsym becomessym expr { $$ = createAssignStmt($1, $3); }
+    callStmt : callsym identsym { $$ = ast_call_stmt($2); } ;
 
-    callStmt: callsym identsym { $$ = createCallStmt($2); }
+    beginStmt : beginsym stmts endsym { $$ = ast_begin_stmt($2); } ;
 
-    beginStmt: beginsym stmts endsym { $$ = createBeginStmt($2); }
+    ifStmt : ifsym condition thensym stmt elsesym stmt { $$ = ast_if_stmt($2, $4, $6); } ;
 
-    ifStmt: ifsym condition thensym stmt elsesym stmt { $$ = createIfStmt($2, $4, $6); }
+    whileStmt : whilesym condition dosym stmt { $$ = ast_while_stmt($2, $4); } ; 
 
-    whileStmt: whilesym condition dosym stmt { $$ = createWhileStmt($2, $4); }
+    readStmt : readsym identsym { $$ = ast_read_stmt($2); } ;
 
-    readStmt: readsym identsym { $$ = createReadStmt($2); }
+    writeStmt : writesym expr { $$ = ast_write_stmt($2); } ;
 
-    writeStmt: writesym expr { $$ = createWriteStmt($2); }
+    skipStmt : skipsym { $$ = ast_skip_stmt(file_location_make(lexer_filename(), lexer_line())); } ;
 
-    skipStmt: skipsym { $$ = createSkipStmt(); }
+    stmts : stmt { $$ = ast_stmts_singleton($1); } 
+        | stmts semisym stmt { $$ = ast_stmts($1, $3); } ;
 
-    stmts: stmt { $$ = createStmts($1); } | stmts semisym stmt { $$ = createStmts($3); }
+    condition : oddCondition { $$ = ast_condition_odd($1); }
+            | relOpCondition { $$ = ast_condition_rel($1); } ;
 
-    condition: oddCondition { $$ = createCondition($1); } | relOpCondition { $$ = createCondition($1); }
+    oddCondition : oddsym expr { $$ = ast_odd_condition($2); } ;
 
-    oddCondition: oddsym expr { $$ = createOddCondition($2); }
+    relOpCondition : expr relOp expr { $$ = ast_rel_op_condition($1, $2, $3); } ;
 
-    relOpCondition: expr relOp expr { $$ = createRelOpCondition($1, $2, $3); }
+    relOp : "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 
-    expr: term { $$ = createExpr($1); } | expr plussym term { $$ = createBinaryExpr("+", $1, $3); }
-    | expr minussym term { $$ = createBinaryExpr("-", $1, $3); }
+    expr : term 
+        | expr plussym term { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); }
+        | expr minussym term { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); } ;
 
-    term: factor { $$ = createTerm($1); } | term multsym factor { $$ = createBinaryTerm("*", $1, $3); }
-    | term divsym factor { $$ = createBinaryTerm("/", $1, $3); }
+    term : factor 
+        | term multsym factor { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); }
+        | term divsym factor { $$ = ast_expr_binary_op(ast_binary_op_expr($1, $2, $3)); } ;
 
-    factor: identsym { $$ = createFactor($1); } | minussym numbersym { $$ = createUnaryFactor("-", createNumberFactor($2)); }
-    | posSign numbersym { $$ = createUnaryFactor("+", createNumberFactor($2)); } | lparensym expr rparensym { $$ = $2; }
+    factor : identsym { $$ = ast_expr_ident($1); }
+        | minussym numbersym { $$ = ast_expr_negated_number($1, $2); }
+        | posSign numbersym { $$ = ast_expr_pos_number($1, $2); }
+        | lparensym expr rparensym { $$ = $2; } ;
 
-    relOp: eqsym { $$ = "="; } | neqsym { $$ = "<>"; } | ltsym { $$ = "<"; } | leqsym { $$ = "<="; }
-    | gtsym { $$ = ">"; } | geqsym { $$ = ">="; }
-
-    posSign: plussym { $$ = "+"; } | empty { $$ = NULL; }
-
-    empty: /* empty */ { $$ = NULL; }
+    posSign : empty {;}
+            | plussym ;
+    
+    empty : %empty { $$ = ast_empty(file_location_make(lexer_filename(), lexer_line())); } ;
+    
 %%
 
 // Set the program's ast to be ast
