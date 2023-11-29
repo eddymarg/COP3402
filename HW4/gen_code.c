@@ -297,8 +297,7 @@ code_seq gen_code_read_stmt(read_stmt_t stmt)
 code_seq gen_code_write_stmt(write_stmt_t stmt)
 {
     // put the result into $a0 to get ready for PCH
-    code_seq ret
-	= gen_code_expr(stmt.expr);
+    code_seq ret = gen_code_expr(stmt.expr);
     ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
     ret = code_seq_add_to_end(ret, code_pint());
     return ret;
@@ -309,15 +308,54 @@ code_seq gen_code_skip_stmt(skip_stmt_t stmt)
     return NULL;
 }
 
-// code_seq gen_code_while_stmt(while_stmt_t stmt)
-// {
+code_seq gen_code_while_stmt(while_stmt_t stmt)
+{
+    code_seq ret = code_seq_empty();
+    
+    // Label for the start of the loop
+    char *loopStartLabel = generate_label();
+    
+    // Label for the end of the loop
+    char *loopEndLabel = generate_label();
+    
+    // Generate code for the condition and jump to the end label if false
+    ret = code_seq_concat(ret, code_label(loopStartLabel));
+    ret = code_seq_concat(ret, gen_code_condition(stmt.condition));
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, get_label_address(loopEndLabel)));
+    
+    // Generate code for the body of the loop
+    ret = code_seq_concat(ret, gen_code_stmt(*(stmt.body)));
+    
+    
+    // Jump back to the start of the loop
+    ret = code_seq_add_to_end(ret, code_b(get_label_address(loopStartLabel)));
+    
+    // Label for the end of the loop
+    ret = code_seq_concat(ret, code_label(loopEndLabel));
+    
+    return ret;
+}
 
-// }
-
-// code_seq gen_code_call_stmt(call_stmt_t stmt)
-// {
-
-// }
+code_seq gen_code_call_stmt(call_stmt_t stmt)
+{
+    code_seq ret = code_seq_empty();
+    
+    // Assuming that the call statement has a procedure name
+    // and there's a corresponding label for the procedure
+    char *procedureLabel = stmt.name;
+    
+    // Save registers before the procedure call
+    ret = code_seq_concat(ret, code_save_registers_before_call());
+    
+    // Jump to the procedure label
+    ret = code_seq_add_to_end(ret, code_jal(procedureLabel));
+    
+    // Restore registers after the procedure call
+    ret = code_seq_concat(ret, code_restore_registers_after_call());
+    
+    return ret;
+}
 
 code_seq gen_code_condition(condition_t cond)
 {
