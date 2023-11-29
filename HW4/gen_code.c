@@ -261,18 +261,17 @@ code_seq gen_code_if_stmt(if_stmt_t stmt)
     // put truth value of stmt.expr in $v0
     code_seq ret = gen_code_condition(stmt.condition);
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    code_seq cThen = gen_code_stmt(*(stmt.then_stmt));
-    code_seq cElse = gen_code_stmt(*(stmt.else_stmt));
-    int cThen_len = code_seq_size(cThen);
+    code_seq s1 = gen_code_stmt(*(stmt.then_stmt));
+    code_seq s2 = gen_code_stmt(*(stmt.else_stmt));
+    int s1_len = code_seq_size(s1);
     // skip over body if $v0 contains false
-    ret = code_seq_add_to_end(ret,
-			      code_beq(V0, 0, cThen_len + 1));
+    ret = code_seq_add_to_end(ret, code_beq(V0, 1, s1_len + 1));
     
-    int cElse_len = code_seq_size(cElse);
-    ret = code_seq_add_to_end(ret,
-			      code_beq(0, 0, cElse_len));
-    ret = code_seq_concat(ret, cThen);
-    return code_seq_concat(ret, cElse);
+    int s2_len = code_seq_size(s2);
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, s2_len));
+    ret = code_seq_concat(ret, s1);
+    ret = code_seq_concat(ret, s2);
+    return ret;
 }
 
 // Generate code for the read statment given by stmt
@@ -297,7 +296,8 @@ code_seq gen_code_read_stmt(read_stmt_t stmt)
 code_seq gen_code_write_stmt(write_stmt_t stmt)
 {
     // put the result into $a0 to get ready for PCH
-    code_seq ret = gen_code_expr(stmt.expr);
+    code_seq ret
+	= gen_code_expr(stmt.expr);
     ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
     ret = code_seq_add_to_end(ret, code_pint());
     return ret;
@@ -308,79 +308,46 @@ code_seq gen_code_skip_stmt(skip_stmt_t stmt)
     return NULL;
 }
 
-code_seq gen_code_while_stmt(while_stmt_t stmt)
-{
-    code_seq ret = code_seq_empty();
-    
-    // Label for the start of the loop
-    char *loopStartLabel = generate_label();
-    
-    // Label for the end of the loop
-    char *loopEndLabel = generate_label();
-    
-    // Generate code for the condition and jump to the end label if false
-    ret = code_seq_concat(ret, code_label(loopStartLabel));
-    ret = code_seq_concat(ret, gen_code_condition(stmt.condition));
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, get_label_address(loopEndLabel)));
-    
-    // Generate code for the body of the loop
-    ret = code_seq_concat(ret, gen_code_stmt(*(stmt.body)));
-    
-    
-    // Jump back to the start of the loop
-    ret = code_seq_add_to_end(ret, code_b(get_label_address(loopStartLabel)));
-    
-    // Label for the end of the loop
-    ret = code_seq_concat(ret, code_label(loopEndLabel));
-    
-    return ret;
-}
+// code_seq gen_code_while_stmt(while_stmt_t stmt)
+// {
 
-code_seq gen_code_call_stmt(call_stmt_t stmt)
-{
-    code_seq ret = code_seq_empty();
-    
-    // Assuming that the call statement has a procedure name
-    // and there's a corresponding label for the procedure
-    char *procedureLabel = stmt.name;
-    
-    // Save registers before the procedure call
-    ret = code_seq_concat(ret, code_save_registers_before_call());
-    
-    // Jump to the procedure label
-    ret = code_seq_add_to_end(ret, code_jal(procedureLabel));
-    
-    // Restore registers after the procedure call
-    ret = code_seq_concat(ret, code_restore_registers_after_call());
-    
-    return ret;
-}
+// }
+
+// code_seq gen_code_call_stmt(call_stmt_t stmt)
+// {
+
+// }
 
 code_seq gen_code_condition(condition_t cond)
 {
-    switch (cond.cond_kind)
+    switch (cond.cond_kind) 
     {
         case ck_odd:
-            gen_code_odd_condition(cond.data.odd_cond);
+            return gen_code_odd_condition(cond.data.odd_cond);
             break;
         case ck_rel:
-            gen_code_rel_op_condition(cond.data.rel_op_cond);
+            return gen_code_rel_op_condition(cond.data.rel_op_cond);
             break;
         default:
-            bail_with_error("Wrong condition type!");
+            bail_with_error("Unexpected cond_kind_e (%d) in gen_code_condition", cond.cond_kind);
             break;
     }
+
+    return code_seq_empty();
 }
 
 code_seq gen_code_odd_condition(odd_condition_t cond)
 {
-
+    code_seq ret = gen_code_expr(cond.expr);
+    return ret;
 }
 
 code_seq gen_code_rel_op_condition(rel_op_condition_t cond)
 {
-
+    code_seq ret = gen_code_expr(cond.expr1);
+    ret = code_seq_concat(ret, gen_code_rel_op(cond.rel_op));
+    ret = code_seq_concat(ret, gen_code_expr(cond.expr2));
+    return ret;
 }
 
 // Generate code for the expression exp
