@@ -37,12 +37,13 @@ static BOFHeader gen_code_program_header(code_seq main_cs)
     ret.text_start_address = 0;
     // remember, the unit of length in the BOF format is a byte!
     ret.text_length = code_seq_size(main_cs) * BYTES_PER_WORD;
-    int dsa = MAX(ret.text_length, 1024) + BYTES_PER_WORD;
+    // int dsa = MAX(ret.text_length, 1024) + BYTES_PER_WORD;
+    int dsa = 4096;
     ret.data_start_address = dsa;
     // ret.ints_length = 0; // FLOAT has no int literals
     ret.data_length = literal_table_size() * BYTES_PER_WORD;
-    int sba = dsa
-	+ ret.data_start_address + ret.data_length + STACK_SPACE;
+    int sba = 8192;
+	// + ret.data_start_address + ret.data_length + STACK_SPACE;
     ret.stack_bottom_addr = sba;
     return ret;
 }
@@ -78,6 +79,25 @@ void gen_code_program(BOFFILE bf, block_t prog)
     // We want to make the main program's AR look like all blocks... so:
     // allocate space and initialize any variables
     main_cs = gen_code_var_decls(prog.var_decls);
+    main_cs = code_seq_concat(main_cs, gen_code_const_decls(prog.const_decls));
+    int vars_len_in_bytes = (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
+    // there is no static link for the program as a whole,
+    // so nothing to do for saving FP into A0 as would be done for a block
+    main_cs = code_seq_concat(main_cs, code_save_registers_for_AR());
+    main_cs = code_seq_concat(main_cs, gen_code_stmt(prog.stmt));
+    main_cs = code_seq_concat(main_cs, code_restore_registers_from_AR());
+    main_cs = code_seq_concat(main_cs, code_deallocate_stack_space(vars_len_in_bytes));
+    main_cs = code_seq_add_to_end(main_cs, code_exit());
+    gen_code_output_program(bf, main_cs);
+}
+
+code_seq gen_code_block(block_t prog) {
+
+    code_seq main_cs;
+    // We want to make the main program's AR look like all blocks... so:
+    // allocate space and initialize any variables
+    main_cs = gen_code_var_decls(prog.var_decls);
+    main_cs = code_seq_concat(main_cs, gen_code_const_decls(prog.const_decls));
     int vars_len_in_bytes
 	= (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
     // there is no static link for the program as a whole,
@@ -92,7 +112,57 @@ void gen_code_program(BOFFILE bf, block_t prog)
 			      code_deallocate_stack_space(vars_len_in_bytes));
     main_cs
 	= code_seq_add_to_end(main_cs, code_exit());
-    gen_code_output_program(bf, main_cs);
+
+    return main_cs;
+}
+
+code_seq gen_code_const_decls(const_decls_t cds)
+{
+    code_seq ret = code_seq_empty();
+
+    const_decl_t * cdp = cds.const_decls;
+    while(cdp != NULL)
+    {
+        ret = code_seq_concat(gen_code_const_decl(* cdp), ret);
+        cdp = cdp->next;
+    }
+
+    return ret;
+}
+
+// Generate code for the const-decl, cd
+code_seq gen_code_const_decl(const_decl_t cd)
+{
+    return gen_code_const_defs(cd.const_defs);
+}
+
+// Generate code for the const-defs, cdfs
+code_seq gen_code_const_defs(const_defs_t cdfs)
+{
+    code_seq ret = code_seq_empty();
+
+    const_def_t * cdp = cdfs.const_defs;
+    while(cdp != NULL)
+    {
+        ret = code_seq_concat(gen_code_const_def(* cdp), ret);
+        cdp = cdp->next;
+    }
+
+    return ret;
+}
+
+// Generate code for the const-def, cdf
+code_seq gen_code_const_def(const_def_t cdf)
+{
+    code_seq ret = code_allocate_stack_space(BYTES_PER_WORD);
+
+    unsigned int offset = literal_table_lookup(cdf.number.text, cdf.number.value);
+
+    ret = code_seq_concat(ret, code_lw(GP, AT, offset));
+    ret = code_seq_concat(ret, code_addi(SP, SP, -4));
+    ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
+
+    return ret;
 }
 
 // Generate code for the var_decls_t vds to out
@@ -178,9 +248,9 @@ code_seq gen_code_stmt(stmt_t stmt)
     case skip_stmt:
 	return gen_code_skip_stmt(stmt.data.skip_stmt);
 	break;
-    // case while_stmt:
-	// return gen_code_while_stmt(stmt.data.while_stmt);
-	// break;
+    case while_stmt:
+	return gen_code_while_stmt(stmt.data.while_stmt);
+	break;
     // case call_stmt:
 	// return gen_code_call_stmt(stmt.data.call_stmt);
 	// break;
@@ -216,8 +286,7 @@ code_seq gen_code_assign_stmt(assign_stmt_t stmt)
 	// 			  code_sw(T9, V0, offset_count));
 	// break;
     // case variable_idk:
-	// ret = code_seq_add_to_end(ret,
-	// 			  code_sw(T9, V0, offset_count));
+	ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
 	// break;
     // default:
 	// bail_with_error("Bad var_type (%d) for ident in assignment stmt!",
@@ -233,43 +302,15 @@ code_seq gen_code_begin_stmt(begin_stmt_t stmt)
     code_seq ret;
     // allocate space and initialize any variables in block
     ret = gen_code_stmts(stmt.stmts);
-    int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
-    // in FLOAT, surrounding scope's base is FP, so that is the static link
-    ret = code_seq_add_to_end(ret, code_add(0, FP, A0));
-    ret = code_seq_concat(ret, code_save_registers_for_AR());
-    ret = code_seq_concat(ret, gen_code_stmts(stmt.stmts));
-    ret = code_seq_concat(ret, code_restore_registers_from_AR());
-    ret = code_seq_concat(ret, code_deallocate_stack_space(vars_len_in_bytes));
+    // int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
+    // // in FLOAT, surrounding scope's base is FP, so that is the static link
+    // ret = code_seq_add_to_end(ret, code_add(0, FP, A0));
+    // // ret = code_seq_concat(ret, code_save_registers_for_AR());
+    // ret = code_seq_concat(ret, gen_code_stmts(stmt.stmts));
+    // // ret = code_seq_concat(ret, code_restore_registers_from_AR());
+    // ret = code_seq_concat(ret, code_deallocate_stack_space(vars_len_in_bytes));
     return ret;
 }
-
-// Generate code for the const-defs, cdfs
-code_seq gen_code_const_defs(const_defs_t cdfs)
-{
-    code_seq ret = code_seq_empty();
-
-    const_def_t * cdp = cdfs.const_defs;
-    while(cdp != NULL)
-    {
-        ret = code_seq_concat(gen_code_const_def(* cdp), ret);
-        cdp = cdp->next;
-    }
-
-    return ret;
-}
-
-// Generate code for the const-def, cdf
-code_seq gen_code_const_def(const_def_t cdf)
-{
-    code_seq ret = code_allocate_stack_space(BYTES_PER_WORD);
-
-    unsigned int offset = literal_table_lookup(cdf.number.text, cdf.number.value);
-
-    ret = code_seq_concat(ret, code_1w(GP, AT, offset));
-    ret = code_seq_concat(ret, code_addi(SP, SP, -4));
-    ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
-}
-
 
 // Generate code for the list of statments given by stmts
 code_seq gen_code_stmts(stmts_t stmts)
@@ -340,37 +381,28 @@ code_seq gen_code_while_stmt(while_stmt_t stmt)
 {
     code_seq ret = code_seq_empty();
 
-    // Label for the start of the while loop
-    char* loop_start_label = generate_label();
-    // Label for the end of the while loop
-    char* loop_end_label = generate_label();
+    // Evaluate the condition and push its truth value on the stack
+    code_seq cond_seq = gen_code_condition(stmt.condition);
+    int cond_seq_len = code_seq_size(cond_seq);
 
-    // Label for the condition check
-    char* condition_label = generate_label();
+    // Generate the body of the while loop
+    code_seq body_seq = gen_code_stmt(*(stmt.body));
+    int body_seq_len = code_seq_size(body_seq);
 
-    // Jump to the condition check
-    ret = code_seq_concat(ret, code_j(condition_label));
-    // Label for the start of the while loop
-    ret = code_seq_add_to_end(ret, code_label(loop_start_label));
+    // Concatenate condition code at the beginning
+    ret = code_seq_concat(ret, cond_seq);
 
-    // Generate code for the condition
-    ret = code_seq_add_to_end(ret, code_label(condition_label));
-    code_seq condition_code = gen_code_condition(stmt.condition);
-    ret = code_seq_concat(ret, condition_code);
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+    // Pop the truth value into $v0
+    ret = code_seq_add_to_end(ret, code_pop_stack_into_reg(V0));
 
-    // Skip the body if the condition is false
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, strlen("length(S) + 1")));
+    // Skip the body of the loop if condition is false
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, body_seq_len + 1));
 
-    // Generate code for the body
-    code_seq body_code = gen_code_stmt(*(stmt.body));
-    ret = code_seq_concat(ret, body_code);
+    // Concatenate the body sequence
+    ret = code_seq_concat(ret, body_seq);
 
-    // Jump back to the start of the loop
-    ret = code_seq_add_to_end(ret, code_j(loop_start_label));
-
-    // Label for the end of the while loop
-    ret = code_seq_add_to_end(ret, code_label(loop_end_label));
+    // Jump back to the condition check, which should re-evaluate the condition
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, -(cond_seq_len + body_seq_len + 1)));
 
     return ret;
 }
@@ -581,8 +613,7 @@ code_seq gen_code_ident(ident_t id)
     assert(offset_count <= USHRT_MAX); // it has to fit!
     // id_kind typ = id_use_get_attrs(id.idu)->kind;
     // if (typ == variable_idk) {
-	// ret = code_seq_add_to_end(ret,
-	// 			  code_flw(T9, V0, offset_count));
+	ret = code_seq_add_to_end(ret, code_lw(T9, V0, offset_count));
     // } else {
 	// ret = code_seq_add_to_end(ret,
 	// 			  code_lw(T9, V0, offset_count));
