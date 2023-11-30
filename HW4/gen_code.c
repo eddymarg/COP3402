@@ -178,9 +178,9 @@ code_seq gen_code_stmt(stmt_t stmt)
     case skip_stmt:
 	return gen_code_skip_stmt(stmt.data.skip_stmt);
 	break;
-    case while_stmt:
-	return gen_code_while_stmt(stmt.data.while_stmt);
-	break;
+    // case while_stmt:
+	// return gen_code_while_stmt(stmt.data.while_stmt);
+	// break;
     // case call_stmt:
 	// return gen_code_call_stmt(stmt.data.call_stmt);
 	// break;
@@ -255,6 +255,33 @@ code_seq gen_code_stmts(stmts_t stmts)
     return ret;
 }
 
+// Generate code for the const-defs, cdfs
+code_seq gen_code_const_defs(const_defs_t cdfs)
+{
+    code_seq ret = code_seq_empty();
+
+    const_def_t * cdp = cdfs.const_defs;
+    while(cdp != NULL)
+    {
+        ret = code_seq_concat(gen_code_const_def(* cdp));
+        cdp = cdp->next;
+    }
+
+    return ret;
+}
+
+// Generate code for the const-def, cdf
+code_seq gen_code_const_def(const_def_t cdf)
+{
+    code_seq ret = code_allocate_stack_space(BYTES_PER_WORD);
+
+    unsigned int offset = literal_table_lookup(cdf.number.text, cdf.number.value);
+
+    ret = code_seq_concat(ret, code_1w(GP, AT, offset));
+    ret = code_seq_concat(ret, code_addi(SP, SP, -4));
+    ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
+}
+
 // Generate code for the if-statment given by stmt
 code_seq gen_code_if_stmt(if_stmt_t stmt)
 {
@@ -312,28 +339,37 @@ code_seq gen_code_while_stmt(while_stmt_t stmt)
 {
     code_seq ret = code_seq_empty();
 
-    // Evaluate the condition and push its truth value on the stack
-    code_seq cond_seq = gen_code_condition(stmt.condition);
-    int cond_seq_len = code_seq_size(cond_seq);
+    // Label for the start of the while loop
+    char* loop_start_label = generate_label();
+    // Label for the end of the while loop
+    char* loop_end_label = generate_label();
 
-    // Generate the body of the while loop
-    code_seq body_seq = gen_code_stmt(*(stmt.body));
-    int body_seq_len = code_seq_size(body_seq);
+    // Label for the condition check
+    char* condition_label = generate_label();
 
-    // Concatenate condition code at the beginning
-    ret = code_seq_concat(ret, cond_seq);
+    // Jump to the condition check
+    ret = code_seq_concat(ret, code_j(condition_label));
+    // Label for the start of the while loop
+    ret = code_seq_add_to_end(ret, code_label(loop_start_label));
 
-    // Pop the truth value into $v0
-    ret = code_seq_add_to_end(ret, code_pop_stack_into_reg(V0));
+    // Generate code for the condition
+    ret = code_seq_add_to_end(ret, code_label(condition_label));
+    code_seq condition_code = gen_code_condition(stmt.condition);
+    ret = code_seq_concat(ret, condition_code);
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
 
-    // Skip the body of the loop if condition is false
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, body_seq_len + 1));
+    // Skip the body if the condition is false
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, strlen("length(S) + 1")));
 
-    // Concatenate the body sequence
-    ret = code_seq_concat(ret, body_seq);
+    // Generate code for the body
+    code_seq body_code = gen_code_stmt(*(stmt.body));
+    ret = code_seq_concat(ret, body_code);
 
-    // Jump back to the condition check, which should re-evaluate the condition
-    ret = code_seq_add_to_end(ret, code_beq(0, 0, -(cond_seq_len + body_seq_len + 1)));
+    // Jump back to the start of the loop
+    ret = code_seq_add_to_end(ret, code_j(loop_start_label));
+
+    // Label for the end of the while loop
+    ret = code_seq_add_to_end(ret, code_label(loop_end_label));
 
     return ret;
 }
