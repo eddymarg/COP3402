@@ -266,10 +266,10 @@ code_seq gen_code_if_stmt(if_stmt_t stmt)
     int s1_len = code_seq_size(s1);
     // skip over body if $v0 contains false
     ret = code_seq_add_to_end(ret, code_beq(V0, 1, s1_len + 1));
-    
+    ret = code_seq_concat(ret, s1);
+
     int s2_len = code_seq_size(s2);
     ret = code_seq_add_to_end(ret, code_beq(0, 0, s2_len));
-    ret = code_seq_concat(ret, s1);
     ret = code_seq_concat(ret, s2);
     return ret;
 }
