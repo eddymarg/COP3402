@@ -243,18 +243,6 @@ code_seq gen_code_begin_stmt(begin_stmt_t stmt)
     return ret;
 }
 
-// Generate code for the list of statments given by stmts
-code_seq gen_code_stmts(stmts_t stmts)
-{
-    code_seq ret = code_seq_empty();
-    stmt_t *sp = stmts.stmts;
-    while (sp != NULL) {
-	ret = code_seq_concat(ret, gen_code_stmt(*sp));
-	sp = sp->next;
-    }
-    return ret;
-}
-
 // Generate code for the const-defs, cdfs
 code_seq gen_code_const_defs(const_defs_t cdfs)
 {
@@ -263,7 +251,7 @@ code_seq gen_code_const_defs(const_defs_t cdfs)
     const_def_t * cdp = cdfs.const_defs;
     while(cdp != NULL)
     {
-        ret = code_seq_concat(gen_code_const_def(* cdp));
+        ret = code_seq_concat(gen_code_const_def(* cdp), ret);
         cdp = cdp->next;
     }
 
@@ -280,6 +268,19 @@ code_seq gen_code_const_def(const_def_t cdf)
     ret = code_seq_concat(ret, code_1w(GP, AT, offset));
     ret = code_seq_concat(ret, code_addi(SP, SP, -4));
     ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
+}
+
+
+// Generate code for the list of statments given by stmts
+code_seq gen_code_stmts(stmts_t stmts)
+{
+    code_seq ret = code_seq_empty();
+    stmt_t *sp = stmts.stmts;
+    while (sp != NULL) {
+	ret = code_seq_concat(ret, gen_code_stmt(*sp));
+	sp = sp->next;
+    }
+    return ret;
 }
 
 // Generate code for the if-statment given by stmt
