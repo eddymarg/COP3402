@@ -178,9 +178,9 @@ code_seq gen_code_stmt(stmt_t stmt)
     case skip_stmt:
 	return gen_code_skip_stmt(stmt.data.skip_stmt);
 	break;
-    // case while_stmt:
-	// return gen_code_while_stmt(stmt.data.while_stmt);
-	// break;
+    case while_stmt:
+	return gen_code_while_stmt(stmt.data.while_stmt);
+	break;
     // case call_stmt:
 	// return gen_code_call_stmt(stmt.data.call_stmt);
 	// break;
@@ -308,10 +308,35 @@ code_seq gen_code_skip_stmt(skip_stmt_t stmt)
     return NULL;
 }
 
-// code_seq gen_code_while_stmt(while_stmt_t stmt)
-// {
+code_seq gen_code_while_stmt(while_stmt_t stmt)
+{
+    code_seq ret = code_seq_empty();
 
-// }
+    // Evaluate the condition and push its truth value on the stack
+    code_seq cond_seq = gen_code_condition(stmt.condition);
+    int cond_seq_len = code_seq_size(cond_seq);
+
+    // Generate the body of the while loop
+    code_seq body_seq = gen_code_stmt(*(stmt.body));
+    int body_seq_len = code_seq_size(body_seq);
+
+    // Concatenate condition code at the beginning
+    ret = code_seq_concat(ret, cond_seq);
+
+    // Pop the truth value into $v0
+    ret = code_seq_add_to_end(ret, code_pop_stack_into_reg(V0));
+
+    // Skip the body of the loop if condition is false
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, body_seq_len + 1));
+
+    // Concatenate the body sequence
+    ret = code_seq_concat(ret, body_seq);
+
+    // Jump back to the condition check, which should re-evaluate the condition
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, -(cond_seq_len + body_seq_len + 1)));
+
+    return ret;
+}
 
 // code_seq gen_code_call_stmt(call_stmt_t stmt)
 // {
